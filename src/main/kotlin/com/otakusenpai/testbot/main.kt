@@ -1,17 +1,24 @@
 package com.otakusenpai.testbot
 
-import com.otakusenpai.testbot.BasicConnection
+import com.otakusenpai.testbot.connection.*
+import com.otakusenpai.testbot.connection.BasicConnection
 import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.io.*
 
-fun setConnection(conn: BasicConnection) = runBlocking {
+fun setConnection(conn: Connection) = runBlocking {
     try {
+        println("Connecting....")
+        var i = 0
         while(!conn.connected) {
+            ++i
             delay(6000L)
+            println("Trying for the ${i}'th time... ")
             conn.Connect()
         }
-        conn.sendData("NICK NikoCat" + "\r\n")
-        conn.sendData("USER " + "NikoCat" + " " + "0" + " * :" + "NikoCat" + "\r\n")
+
+        conn.sendData("NICK BamBaka" + "\r\n")
+        conn.sendData("USER " + "BamBaka" + " " + "0" + " * :" + "BamBaka" + "\r\n")
+        //conn.sendData("PRIVMSG NickServ :identify password\r\n")
+        println("Connected!")
         true
     } catch(e: Throwable) {
         e.printStackTrace()
@@ -36,41 +43,47 @@ fun hasIt(data: String?, key: String): Boolean {
 
 fun main(args: Array<String>) {
     try {
-        val name = "KtorTestBot"
-        val user = "KtorTestBot"
-        val realname: String = "OtakuSenpai"
         val port: Int = 6667
         val address = "chat.freenode.net"
-        val conn = BasicConnection(port,address)
-        var data: String
-
+        val conn: Connection = BasicConnection(port,address)
+        var data: String?
+        var running = false
         println("This bot will connect to chat.freenode.net, over the port 6667.")
         println("The name of the bot is KtorTestBot, and the channel it will join is ##bot-test")
         println("To see the bot in action, join ##bot-test(after connecting, type '/join ##bot-test'")
         println("This bot is intented to teach how to use the raw sockets of Ktor.")
-        println("Made by Avra Neel aka OtakuSenpai, under public domain!!") 
-        println("") 
+        println("Made by Avra Neel aka OtakuSenpai, under public domain!!")
+        println("")
 
-        var running = setConnection(conn)
+        val one = async(CommonPool) {
+            running = setConnection(conn)
+            delay(500L)
+        }
 
+        runBlocking { one.await() }
+
+        println("Entering loop...")
         while(running) {
-            data = conn.receiveData() as String
+            data = conn.receiveData()
+            println("Received data, printing...")
             println(data)
+            if(data == null)
+                throw Exception("BasicBot.kt: Null value received from connection!")
             if(hasIt(data,"004")) {
                 println("Connected...")
-                var temp = "JOIN ##bot-test\r\n"
-                conn.sendData(temp)
             }
-            //PING :verne.freenode.net 
+            if(hasIt(data,"433")) {
+                conn.sendData("NICK BamBaka1" + "\r\n")
+            }
             if(hasIt(data,"PING")) {
-                var temp = data
-                var contents = temp.substring(temp.indexOf(" ")+1, temp.length)
-                println("Sending ping: ${contents}")
-                conn.sendData(temp)
+                var s = data.substring(data.indexOf("PING"),data.length)
+                conn.sendData("PONG " + s + "\r\n")
             }
         }
-    } catch(e: Throwable) {
+
+        // if(!running && !disconnect) Connect()
+        // else if(disconnect) conn.Disconnect()
+    } catch (e: Throwable) {
         e.printStackTrace()
     }
-
 }
