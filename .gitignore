@@ -1,6 +1,11 @@
 .gradle/
 build/
+gradle/
+out/
 
-TestBot.iml
-TestBot.ipr
-TestBot.iws
+gradlew
+gradlew.bat
+
+*.iml
+*.ipr
+*.iws

@@ -1,4 +1,4 @@
-package com.otakusenpai.testbot.connection
+package com.github.otakusenpai.testbot.connection
 
 import io.ktor.network.sockets.Socket
 import kotlinx.coroutines.experimental.Deferred

@@ -1,8 +1,13 @@
-package com.otakusenpai.testbot
+package com.github.otakusenpai.testbot
 
-import com.otakusenpai.testbot.connection.*
-import com.otakusenpai.testbot.connection.BasicConnection
-import kotlinx.coroutines.experimental.*
+import com.github.otakusenpai.testbot.connection.BasicConnection
+import com.github.otakusenpai.testbot.connection.Connection
+import com.github.otakusenpai.testbot.connection.SslConnection
+import kotlinx.coroutines.experimental.CommonPool
+import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.experimental.runBlocking
+import java.util.*
 
 fun setConnection(conn: Connection) = runBlocking {
     try {
@@ -43,17 +48,34 @@ fun hasIt(data: String?, key: String): Boolean {
 
 fun main(args: Array<String>) {
     try {
-        val port: Int = 6667
-        val address = "chat.freenode.net"
-        val conn: Connection = BasicConnection(port,address)
-        var data: String?
-        var running = false
-        println("This bot will connect to chat.freenode.net, over the port 6667.")
-        println("The name of the bot is KtorTestBot, and the channel it will join is ##bot-test")
-        println("To see the bot in action, join ##bot-test(after connecting, type '/join ##bot-test'")
-        println("This bot is intented to teach how to use the raw sockets of Ktor.")
+        println("This is a demo of Raw Sockets using Ktor." +
+                "\nIn this demo we connect to any IRC server using both SSL and PLAIN connection." +
+                "\nThis is a demo only, feel free to use the code as you wish.")
         println("Made by Avra Neel aka OtakuSenpai, under public domain!!")
         println("")
+
+        var address = ""                           // The address to connect to
+        var data: String?                          // The data input from the server
+        val sc = Scanner(System.`in`)              // for input
+        var running = false                        // Used in bot's loop
+        var choice = ""                            // User choice between ssl and plain
+        lateinit var conn: Connection              // connection demo
+
+        println("Enter the address: ")
+        address = sc.nextLine()
+
+        println("Enter connection mechanism:" +
+                "\n1) Plain = plain" +
+                "\n2) Ssl = ssl")
+        choice = sc.nextLine()
+        if(choice == "plain")
+            conn = BasicConnection(6667,address)
+        else if(choice == "ssl")
+            conn = SslConnection(6697,address)
+        else {
+            println("Defaulted to PLAIN ...")
+            conn = BasicConnection(6667,address)
+        }
 
         val one = async(CommonPool) {
             running = setConnection(conn)

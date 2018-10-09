@@ -1,11 +1,13 @@
-package com.otakusenpai.testbot.connection
+package com.github.otakusenpai.testbot.connection
 
-import com.otakusenpai.testbot.connection.Connection
+import io.ktor.network.selector.ActorSelectorManager
 import io.ktor.network.sockets.*
-import io.ktor.network.sockets.Socket
+import io.ktor.network.util.ioCoroutineDispatcher
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.io.*
+import kotlinx.io.charsets.Charset
 import java.net.*
+import java.nio.ByteBuffer
 
 class BasicConnection: Connection {
 
@@ -14,7 +16,8 @@ class BasicConnection: Connection {
             try {
                 port = Port
                 address = Address
-                socket = aSocket().tcp().connect(InetSocketAddress(address, port))
+                socket = aSocket(ActorSelectorManager(ioCoroutineDispatcher)).
+                        tcp().connect(InetSocketAddress(address,port))
                 input = socket.openReadChannel()
                 output = socket.openWriteChannel(autoFlush = true)
                 connected = true
@@ -29,7 +32,8 @@ class BasicConnection: Connection {
     override fun Connect() = runBlocking {
         if(!connected) {
             try {
-                socket = aSocket().tcp().connect(InetSocketAddress(address,port))
+                socket = aSocket(ActorSelectorManager(ioCoroutineDispatcher)).
+                        tcp().connect(InetSocketAddress(address,port))
                 input = socket.openReadChannel()
                 output = socket.openWriteChannel(autoFlush = true)
                 connected = true
@@ -43,7 +47,7 @@ class BasicConnection: Connection {
 
     override fun sendDataAsync(data: String) = async {
         try {
-            output.writeBytes(data)
+            output.writeByte(data.toByte())
             println("Sending: ${data}")
         } catch (e: Throwable) {
             e.printStackTrace()
@@ -55,7 +59,7 @@ class BasicConnection: Connection {
     override fun sendData(data: String) {
         try {
             runBlocking {
-                output.writeBytes(data)
+                output.writeByte(data.toByte())
                 println("Sending: ${data}")
             }
         } catch (e: Throwable) {
@@ -68,7 +72,10 @@ class BasicConnection: Connection {
     override fun receiveData(): String? = runBlocking {
         var data: String? = null
         try {
-            data = input.readASCIILine()
+            // 512 here is the MAX size of a IRC message
+            var byteBuffer = ByteBuffer.wrap(ByteArray(512))
+            input.read { byteBuffer }
+            data = String(byteBuffer.array(), Charset.forName("ASCII"))
             if(data == null) {
                 throw Exception("BasicConnection.kt: Didn't receive data from connection!")
             }
@@ -82,7 +89,6 @@ class BasicConnection: Connection {
         var data: String? = null
 
         try {
-            //log("In BasicConn receiveData,taking input!")
             data = input.readUTF8Line()
             println("Receiving: ${data}")
             if(data == null) {
