@@ -1,6 +1,7 @@
 package com.github.otakusenpai.testbot.connection
 
 import io.ktor.network.sockets.Socket
+import io.ktor.network.sockets.isClosed
 import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.io.ByteReadChannel
 import kotlinx.coroutines.experimental.io.ByteWriteChannel

@@ -4,7 +4,7 @@ version '2.0'
 buildscript {
     ext.kotlin_version = '1.2.71'
     ext.ktor_version = '0.9.5'
-    ext.ktx = '0.30.1'
+    ext.ktx = '0.26.0'
 
     ext.jarDir = rootProject.buildDir.path + '/libs'
 
@@ -42,7 +42,7 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-coroutines-android:$ktx"
+    compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$ktx"
     compile "io.ktor:ktor-network:$ktor_version"
     compile "io.ktor:ktor-network:$ktor_version"
     compile "io.ktor:ktor-network-tls:$ktor_version"

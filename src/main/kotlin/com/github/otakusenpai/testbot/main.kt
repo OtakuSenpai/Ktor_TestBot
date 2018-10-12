@@ -3,10 +3,7 @@ package com.github.otakusenpai.testbot
 import com.github.otakusenpai.testbot.connection.BasicConnection
 import com.github.otakusenpai.testbot.connection.Connection
 import com.github.otakusenpai.testbot.connection.SslConnection
-import kotlinx.coroutines.experimental.CommonPool
-import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.experimental.*
 import java.util.*
 
 fun setConnection(conn: Connection) = runBlocking {
@@ -20,8 +17,8 @@ fun setConnection(conn: Connection) = runBlocking {
             conn.Connect()
         }
 
-        conn.sendData("NICK BamBaka" + "\r\n")
-        conn.sendData("USER " + "BamBaka" + " " + "0" + " * :" + "BamBaka" + "\r\n")
+        conn.sendData("NICK KtorBot" + "\r\n")
+        conn.sendData("USER " + "KtorBot" + " " + "0" + " * :" + "KtorBot" + "\r\n")
         //conn.sendData("PRIVMSG NickServ :identify password\r\n")
         println("Connected!")
         true
@@ -46,7 +43,7 @@ fun hasIt(data: String?, key: String): Boolean {
     return found
 }
 
-fun main(args: Array<String>) {
+fun main(args: Array<String>) = runBlocking {
     try {
         println("This is a demo of Raw Sockets using Ktor." +
                 "\nIn this demo we connect to any IRC server using both SSL and PLAIN connection." +
@@ -55,7 +52,7 @@ fun main(args: Array<String>) {
         println("")
 
         var address = ""                           // The address to connect to
-        var data: String?                          // The data input from the server
+        var data: String? = null                   // The data input from the server
         val sc = Scanner(System.`in`)              // for input
         var running = false                        // Used in bot's loop
         var choice = ""                            // User choice between ssl and plain
@@ -77,28 +74,30 @@ fun main(args: Array<String>) {
             conn = BasicConnection(6667,address)
         }
 
-        val one = async(CommonPool) {
+        val one = GlobalScope.async {
             running = setConnection(conn)
-            delay(500L)
         }
 
         runBlocking { one.await() }
 
         println("Entering loop...")
         while(running) {
-            data = conn.receiveData()
-            println("Received data, printing...")
-            println(data)
+
+            val job = GlobalScope.async { data = conn.receiveUTF8Data() }
+            job.await()
+            println("Received data: $data")
             if(data == null)
                 throw Exception("BasicBot.kt: Null value received from connection!")
+
             if(hasIt(data,"004")) {
-                println("Connected...")
+                println("Joining channel...")
+                conn.sendData("JOIN ##Ktor")
             }
             if(hasIt(data,"433")) {
-                conn.sendData("NICK BamBaka1" + "\r\n")
+                conn.sendData("NICK GuestUser687328" + "\r\n")
             }
             if(hasIt(data,"PING")) {
-                var s = data.substring(data.indexOf("PING"),data.length)
+                var s = data?.substring(data?.indexOf("PING") as Int,data?.length as Int)
                 conn.sendData("PONG " + s + "\r\n")
             }
         }

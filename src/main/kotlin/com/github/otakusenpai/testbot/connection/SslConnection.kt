@@ -9,6 +9,7 @@ import kotlinx.coroutines.experimental.io.*
 import java.net.*
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
 class SslConnection: Connection {
 
@@ -48,7 +49,8 @@ class SslConnection: Connection {
 
     override fun sendDataAsync(data: String) = async {
         try {
-            output.writeByte(data.toByte())
+            output.write { ByteBuffer.wrap(data.toByteArray()) }
+            println("Sending: ${data}")
         } catch (e: Throwable) {
             e.printStackTrace()
             socket.close()
@@ -59,7 +61,8 @@ class SslConnection: Connection {
     override fun sendData(data: String) {
         try {
             runBlocking {
-                output.writeByte(data.toByte())
+                output.write { ByteBuffer.wrap(data.toByteArray()) }
+                println("Sending: ${data}")
             }
         } catch (e: Throwable) {
             e.printStackTrace()
@@ -68,16 +71,25 @@ class SslConnection: Connection {
         }
     }
 
+    @Deprecated("This function us deprecated, use receiveUTF8Data(): String?")
     override fun receiveData(): String? = runBlocking {
         var data: String? = null
         try {
             // 512 here is the MAX size of a IRC message
-            var byteBuffer = ByteBuffer.wrap(ByteArray(512))
-            input.read { byteBuffer }
-            data = String(byteBuffer.array(), Charset.forName("ASCII"))
-            if(data == null) {
-                throw Exception("BasicConnection.kt: Didn't receive data from connection!")
+            val bbToString = { bb: ByteBuffer ->
+                try {
+                    var decoder = StandardCharsets.US_ASCII.newDecoder()
+                    var charBuffer = decoder.decode(bb)
+                    data = charBuffer.toString()
+                } catch(e: Throwable) {
+                    throw e
+                }
             }
+            input.read{ byteBuffer: ByteBuffer -> bbToString(byteBuffer) }
+            if(data == null) {
+                throw Exception("SslConnection.kt: Didn't receive data from connection!")
+            }
+            println("Data size = ${data?.length}")
         } catch(e: Throwable) {
             e.printStackTrace()
         }
@@ -89,10 +101,8 @@ class SslConnection: Connection {
 
         try {
             data = input.readUTF8Line(512)
-            println("Receiving: ${data}")
-            if (data == null) {
-                throw Exception("BasicConnection.kt: Didn't receive data from connection!")
-            }
+            if (data == null)
+                throw Exception("SslConnection.kt: Didn't receive data from connection!")
         } catch (e: Throwable) {
             e.printStackTrace()
             socket.close()
